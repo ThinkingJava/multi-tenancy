@@ -39,7 +39,7 @@ mybatis多租户测试
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户表' ROW_FORMAT = Dynamic;
 
-  ```
+ ```
   
 - 多租户核心注入bean
 
