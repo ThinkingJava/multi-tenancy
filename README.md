@@ -59,32 +59,49 @@ mybatis多租户测试
 - 多租户核心操作工具 TenantContext
   
   ```java
-    public void initRoute() {
-        redisTemplate.delete(CacheConstants.ROUTE_KEY);
-          log.info("开始初始化网关路由");
+    /**
+     * 以某个租户的身份运行
+     *
+     * @param tenant 租户ID
+     * @param func
+     */
+    public void voidRunAs(String tenant, VoidHandleAs<String> func) {
+        final String pre = TenantContextHolder.getTenantId();
+        try {
+            log.trace("TenantBroker 切换租户{} -> {}", pre, tenant);
+            TenantContextHolder.setTenantId(tenant);
+            func.run(tenant);
+        } catch (Exception e) {
+            throw new TenantContextException(e.getMessage(), e);
+        } finally {
+            log.trace("TenantBroker 还原租户{} <- {}", pre, tenant);
+            TenantContextHolder.setTenantId(pre);
+        }
+    }
 
-          gatewayRouteConfigService.list().forEach(route -> {
-              RouteDefinitionVo vo = new RouteDefinitionVo();
-              vo.setRouteName(route.getRouteName());
-              vo.setId(route.getRouteId());
-              vo.setUri(URI.create(route.getUri()));
-              vo.setOrder(route.getOrder());
-  
-              JSONArray filterObj = JSONUtil.parseArray(route.getFilters());
-              vo.setFilters(filterObj.toList(FilterDefinition.class));
-              JSONArray predicateObj = JSONUtil.parseArray(route.getPredicates());
-              vo.setPredicates(predicateObj.toList(PredicateDefinition.class));
-  
-              log.info("加载路由ID：{},{}", route.getRouteId(), vo);
-              redisTemplate.setHashValueSerializer(new Jackson2JsonRedisSerializer<>(RouteDefinitionVo.class));
-              redisTemplate.opsForHash().put(CacheConstants.ROUTE_KEY, route.getRouteId(), vo);
-          });
-  
-          // 通知网关重置路由
-          redisTemplate.convertAndSend(CacheConstants.ROUTE_JVM_RELOAD_TOPIC, "路由信息,网关缓存更新");
-          log.debug("初始化网关路由结束 ");
-      }
+    /**
+     * 以某个租户的身份运行
+     *
+     * @param tenant 租户ID
+     * @param func
+     * @param <T>    返回数据类型
+     * @return
+     */
+    public <T> T returnRunAs(String tenant, ReturnHandleAs<String, T> func) {
+        final String pre = TenantContextHolder.getTenantId();
+        try {
+            log.trace("TenantBroker 切换租户{} -> {}", pre, tenant);
+            TenantContextHolder.setTenantId(tenant);
+            return func.run(tenant);
+        } catch (Exception e) {
+            throw new TenantContextException(e.getMessage(), e);
+        } finally {
+            log.trace("TenantBroker 还原租户{} <- {}", pre, tenant);
+            TenantContextHolder.setTenantId(pre);
+        }
+    }
   ```
+
 
 
 
